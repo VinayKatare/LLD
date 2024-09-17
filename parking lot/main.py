@@ -23,6 +23,7 @@ class ParkingFloor:
 
         self.reserved = [ [ False ] * self.col for _ in range( self.row ) ] 
 
+        self.freeSpots = self.row * self.col
     
     def park( self, vechileType ):
         
@@ -30,13 +31,15 @@ class ParkingFloor:
             for j in range( self.floorPlan[i] ) :
                 if j == vechileType and not self.reserved[i][j]:
                     self.reserved[i][j] = True
+                    self.freeSpots -=1
                     return f"{self.floor} - {i} - {j}" 
 
 
-        
+    def remove( self, positions ):
+        i,j = map( int, map( lambda x:x.strip(), positions.split('-') ) )
+        self.reserved[ i ][ j ] = False
+        self.freeSpots += 1
 
-    
-    
 
 class statergies:
     @abstractmethod
@@ -44,18 +47,26 @@ class statergies:
         pass
 
 class lowestSpotAvailable( statergies ):
-    def __init__(self) -> None:
-        pass
-
     def park(floors, vechileType):
-        return super().park(floors, vechileType)
+        
+        for floor in range( len( floors ) ):
+            spotId = floors[ floor ].park( vechileType )
+            if spotId:
+                return spotId
 
 class maximunFreeSlots( statergies ):
-    def __init__(self) -> None:
-        pass
 
     def park(floors, vechileType):
-        return super().park(floors, vechileType)
+        
+        floorWithMaxAvailableSlots = -1
+        maxAvailableSlots = -1
+
+        for floor in range( len( floors ) ):
+            if floors[ floor ].freeSpots > maxAvailableSlots:
+                maxAvailableSlots = floors[ floor ].freeSpots
+                floorWithMaxAvailableSlots = floor
+
+        floors[ floorWithMaxAvailableSlots ].park( vechileType )
     
 class ParkingManager:
     def __init__(self) -> None:
@@ -68,7 +79,18 @@ class ParkingManager:
 class SearchManager:
 
     def __init__(self) -> None:
-        pass
+        self.cache = {}
+
+    def storeVechileDetails( self, spotId, vechileId, ticketId  ):
+        self.cache[ vechileId ] = spotId
+        self.cache[ ticketId ]  = spotId
+
+    def findVechile( self, vechileOrTicketId ):
+        return self.cache.get( vechileOrTicketId, '' )
+    
+    def removeVechileDetails( self,  vechileId, ticketId  ):
+        del self.cache[ vechileId ]
+        del self.cache[ ticketId ]
 
 @dataclass
 class Solution:
@@ -80,12 +102,17 @@ class Solution:
         self.searchManager  = SearchManager()
 
     def park( self, vechileType, vechileId, ticketId, statergy ):
-        spotId =  self.statergies[ statergy ].park()
+        spotId =  self.parkingManager.park( statergy, self.floors, vechileType )
         if spotId:
-            
-    
-
-
+            self.searchManager.storeVechileDetails( spotId, vechileId, ticketId )
+            return spotId
+        
+    def remove( self,  vechileId, ticketId  ):
+        spotId = self.searchManager.findVechile( vechileId, ticketId )
+        if spotId:
+            floor, positions = spotId.split('-')
+            self.floors[ floor ].remove( positions )
+        return 
 
 def run():
     pass
